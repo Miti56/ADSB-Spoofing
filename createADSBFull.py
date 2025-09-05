@@ -1,35 +1,41 @@
-import json
 import gzip
 import os
 import glob
 import pandas as pd
+import ijson  # streaming JSON parser
 
-# Top-level folder containing all trace subfolders
 top_folder = "/home/miti/Documents/Github/ADSB-Spoofing/traces"
-output_file = "merged_adsb_dataFull.csv"
-
-# Recursively collect all JSON files in all subfolders
+output_file = "merged_adsb_data.csv"
+batch_size = 100000  # adjust depending on RAM
 files = glob.glob(os.path.join(top_folder, "**", "trace_full_*.json"), recursive=True)
 
-all_data = []
+# Initialize output CSV with header once
+header_written = False
+batch = []
+
+def save_batch(batch, mode="a"):
+    global header_written
+    df = pd.DataFrame(batch)
+    df.to_csv(output_file, mode=mode, index=False, header=not header_written)
+    header_written = True
 
 for file_path in files:
-    # Handle gzip-compressed files if needed
     try:
         with gzip.open(file_path, "rt") as f:
-            data = json.load(f)
+            parser = ijson.items(f, "")
+            data = next(parser)
     except OSError:
         with open(file_path, "r") as f:
-            data = json.load(f)
+            parser = ijson.items(f, "")
+            data = next(parser)
 
     icao = data.get("icao")
     flight = data.get("r")
     aircraft_type = data.get("t")
     desc = data.get("desc")
 
-    trace = data.get("trace", [])
-    
-    for point in trace:
+    # Stream through "trace" array
+    for point in data["trace"]:
         adsb = point[8]
         if adsb:
             record = {
@@ -62,9 +68,15 @@ for file_path in files:
                 "gva": adsb.get("gva"),
                 "sda": adsb.get("sda")
             }
-            all_data.append(record)
+            batch.append(record)
 
-# Convert to DataFrame and save as CSV
-df = pd.DataFrame(all_data)
-df.to_csv(output_file, index=False)
-print(f"Merged dataset saved to {output_file}, total records: {len(df)}")
+        # Write batch to disk periodically
+        if len(batch) >= batch_size:
+            save_batch(batch)
+            batch = []
+
+# Save remaining
+if batch:
+    save_batch(batch)
+
+print(f"Finished extracting ADS-B traces into {output_file}")

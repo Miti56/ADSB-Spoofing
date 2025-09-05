@@ -6,7 +6,7 @@ import pandas as pd
 
 # Folder containing all your trace JSON files
 folder_path = "/home/miti/Documents/Github/ADSB-Spoofing/traces1folder/f1"
-output_file = "merged_adsb_data.csv"
+output_file = "merged_adsb_dataSMALL.csv"
 
 # Collect all JSON files
 files = glob.glob(os.path.join(folder_path, "trace_full_*.json"))

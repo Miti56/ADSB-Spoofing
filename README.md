@@ -74,6 +74,4 @@ Feed **30 days of historical OpenSky aircraft data** into a system, train an ML 
 
 * Options for filtering, selecting ML model, toggling spoofed flights
 
----
 
-Would you like me to also create a **system architecture diagram (Markdown + mermaid.js)** to visualize how the backend, ML model, and frontend interact?
